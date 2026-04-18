@@ -1,5 +1,5 @@
 import { Schema, model } from "mongoose";
-import Comment from "./comment_model.js";
+
 
 const postSchema = new Schema({
     text: {
@@ -23,14 +23,6 @@ const postSchema = new Schema({
     timestamps: true,
 });
 
-postSchema.pre("findOneAndDelete", async function (next) {
-    const doc = await this.model.findOne(this.getFilter());
-    if (!doc) {
-        return next();
-    }
-    await Promise.all(doc.comments.map((commentId) => Comment.findByIdAndDelete(commentId)));
-    next();
-});
 
 const Post = model("Post", postSchema);
 

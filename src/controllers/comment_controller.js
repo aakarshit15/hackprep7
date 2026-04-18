@@ -90,12 +90,31 @@ const deleteComment = async (req, res) => {
         if (!comment) {
             return res.status(404).json({ error: "Comment not found" });
         }
-        await Post.updateMany({ comments: commentId }, { $pull: { comments: commentId } });
-        await Comment.updateMany({ replies: commentId }, { $pull: { replies: commentId } });
+
+        // 1. Remove the reference from any Post that contains it
+        await Post.updateMany(
+            { comments: commentId },
+            { $pull: { comments: commentId } }
+        );
+
+        // 2. Remove the reference from any parent Comment replies
+        await Comment.updateMany(
+            { replies: commentId },
+            { $pull: { replies: commentId } }
+        );
+
+        // 3. Optional: If you want to delete nested replies as well (recursive)
+        if (comment.replies && comment.replies.length > 0) {
+            await Comment.deleteMany({ _id: { $in: comment.replies } });
+        }
+
+        // 4. Finally, delete the comment itself
         await Comment.findByIdAndDelete(commentId);
-        return res.status(200).json({ message: "Comment deleted" });
+
+        return res.status(200).json({ message: "Comment deleted and references removed" });
     } catch (error) {
-        return res.status(500).json({ error: "Delete failed" });
+        console.error(`Error deleting comment: ${error}`);
+        return res.status(500).json({ error: "Delete failed." });
     }
 };
 

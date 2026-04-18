@@ -72,11 +72,21 @@ const deletePost = async (req, res) => {
         if (!post) {
             return res.status(404).json({ error: "Post not found" });
         }
+
         if (post.user.toString() !== req.user._id) {
             return res.status(403).json({ error: "Forbidden" });
         }
+
+        // 1. Delete all comments that belong to this post
+        // Since the comments are stored in the post's 'comments' array
+        if (post.comments && post.comments.length > 0) {
+            await Comment.deleteMany({ _id: { $in: post.comments } });
+        }
+
+        // 2. Finally, delete the post
         await Post.findByIdAndDelete(postId);
-        return res.status(200).json({ message: "Post deleted" });
+
+        return res.status(200).json({ message: "Post and its comments deleted" });
     } catch (error) {
         return res.status(500).json({ error: "Delete failed" });
     }
